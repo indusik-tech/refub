@@ -1,1 +1,2219 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>iFix & Smash: Ремонт и Краш-Тест Телефонов</title>
+  <!-- Telegram Mini Apps SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0b0e14;
+      --bg-panel: #151a24;
+      --bg-card: #1d2432;
+      --accent: #00e5ff;
+      --accent-green: #00e676;
+      --accent-warn: #ffab00;
+      --accent-red: #ff2a55;
+      --text-main: #eef2f7;
+      --text-muted: #8b98a9;
+      --border: #283246;
+    }
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    /* HEADER */
+    .top-bar {
+      background: rgba(21, 26, 36, 0.96);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+    .stats-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .stat-pill {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .stat-pill.money { color: var(--accent-green); border-color: rgba(0,230,118,0.3); }
+    .stat-pill.rep { color: var(--accent); border-color: rgba(0,229,255,0.3); }
+    .stat-pill.hype { color: #ff6dff; border-color: rgba(255,109,255,0.3); }
+    .cloud-btn {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: 0.15s;
+    }
+    .cloud-btn:hover { border-color: var(--accent); }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-warn);
+      display: inline-block;
+    }
+    .dot.ok { background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); }
+    .dot.err { background: var(--accent-red); }
 
+    /* MAIN LAYOUT */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 300px 1fr 310px;
+      gap: 12px;
+      padding: 12px;
+      flex: 1;
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    @media (max-width: 1050px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .panel-title {
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin: 0;
+    }
+
+    /* CLIENT CARD & QUEUE */
+    .client-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .client-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #2b3548, #1a212e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .client-meta h4 {
+      margin: 0 0 2px 0;
+      font-size: 15px;
+    }
+    .client-meta span {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .speech-bubble {
+      background: rgba(0, 0, 0, 0.35);
+      border-left: 3px solid var(--accent);
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.35;
+      color: #d6e0f0;
+    }
+    .order-specs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .spec-item {
+      background: rgba(255,255,255,0.03);
+      padding: 5px 8px;
+      border-radius: 6px;
+    }
+    .spec-item b { color: var(--accent-green); }
+
+    /* BUTTONS */
+    .btn {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 9px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: 0.15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary {
+      background: linear-gradient(135deg, #00b4d8, #0077b6);
+      border-color: #00e5ff;
+      color: #fff;
+    }
+    .btn-success {
+      background: linear-gradient(135deg, #00c853, #009624);
+      border-color: #00e676;
+      color: #fff;
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, #ff1744, #b00020);
+      border-color: #ff5252;
+      color: #fff;
+    }
+    .btn-stream {
+      background: linear-gradient(135deg, #aa00ff, #6200ea);
+      border-color: #e040fb;
+      color: #fff;
+    }
+
+    /* WORKBENCH CENTER */
+    .workbench {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+    }
+    .bench-top-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .temp-gauge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .temp-bar-wrap {
+      width: 100px;
+      height: 10px;
+      background: #0d1117;
+      border-radius: 99px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .temp-bar-fill {
+      height: 100%;
+      width: 15%;
+      background: linear-gradient(90deg, #00e5ff, #00e676, #ffab00, #ff1744);
+      transition: width 0.15s;
+    }
+
+    /* PHONE TABLE AREA */
+    .mat-surface {
+      background:
+        radial-gradient(circle at center, #192538 0%, #0f1622 100%);
+      border: 2px solid #263852;
+      border-radius: 16px;
+      min-height: 470px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 20px;
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.75);
+    }
+    .mat-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0, 229, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.05) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+    }
+    .mat-rulers {
+      position: absolute;
+      bottom: 8px;
+      left: 12px;
+      font-size: 11px;
+      color: rgba(0, 229, 255, 0.35);
+      font-family: monospace;
+      pointer-events: none;
+    }
+
+    /* PHONE CHASSIS */
+    .phone-wrapper {
+      position: relative;
+      transition: transform 0.12s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .phone-chassis {
+      width: 240px;
+      height: 430px;
+      border-radius: 38px;
+      background: linear-gradient(145deg, #2b303a, #161920);
+      border: 4px solid #6c7687;
+      box-shadow:
+        0 20px 45px rgba(0,0,0,0.8),
+        inset 0 0 8px rgba(255,255,255,0.18);
+      position: relative;
+      overflow: hidden;
+      transition: width 0.25s ease, border-radius 0.25s ease;
+    }
+    /* Foldable iPhone Duo wide style */
+    .phone-chassis.duo-model {
+      width: 380px;
+      height: 410px;
+      border-radius: 28px;
+      border-color: #8294b0;
+    }
+    @media (max-width: 460px) {
+      .phone-chassis.duo-model {
+        width: 310px;
+        height: 370px;
+      }
+    }
+
+    /* Fold crease line on Duo */
+    .duo-hinge-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 8px;
+      transform: translateX(-50%);
+      background: linear-gradient(90deg, rgba(0,0,0,0.6), rgba(255,255,255,0.15), rgba(0,0,0,0.6));
+      z-index: 6;
+      pointer-events: none;
+      display: none;
+    }
+    .phone-chassis.duo-model .duo-hinge-line {
+      display: block;
+    }
+
+    /* EXTERIOR SCREEN LAYER */
+    .screen-layer {
+      position: absolute;
+      inset: 5px;
+      border-radius: 32px;
+      background: #07090e;
+      overflow: hidden;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 14px;
+      transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s;
+    }
+    .phone-chassis.duo-model .screen-layer {
+      border-radius: 22px;
+    }
+    .screen-layer.removed {
+      transform: translateX(-115%) rotate(-8deg);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .screen-layer.powered-on {
+      background: linear-gradient(135deg, #1b004b 0%, #004e92 50%, #00d2ff 100%);
+    }
+    .screen-layer.powered-on.glitch {
+      background: repeating-linear-gradient(
+        0deg,
+        #111 0px,
+        #111 4px,
+        #ff0055 5px,
+        #00ffcc 8px
+      );
+    }
+    /* Dynamic Island / Under-display cutout */
+    .dynamic-island {
+      width: 68px;
+      height: 18px;
+      background: #000;
+      border-radius: 99px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 6px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .camera-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #1e40af 20%, #050814 80%);
+    }
+    .os-ui {
+      text-align: center;
+      color: #fff;
+      opacity: 0;
+      transition: 0.25s;
+      margin-top: 25px;
+    }
+    .screen-layer.powered-on .os-ui {
+      opacity: 1;
+    }
+    .os-time {
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    }
+    .os-sub {
+      font-size: 12px;
+      opacity: 0.85;
+      margin-top: 4px;
+    }
+    .os-apps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 35px;
+      padding: 0 8px;
+    }
+    .app-icon {
+      aspect-ratio: 1;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.22);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .home-bar {
+      width: 85px;
+      height: 4px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 9px;
+      margin: 0 auto;
+    }
+
+    /* INTERNAL COMPONENTS LAYER */
+    .internals-layer {
+      position: absolute;
+      inset: 6px;
+      border-radius: 30px;
+      background: #12161f;
+      z-index: 2;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 95px 155px 75px 1fr;
+      gap: 8px;
+    }
+    .phone-chassis.duo-model .internals-layer {
+      border-radius: 20px;
+    }
+    .part-slot {
+      background: #1b2230;
+      border: 2px dashed #374663;
+      border-radius: 10px;
+      padding: 6px;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: 0.15s;
+      font-size: 11px;
+    }
+    .part-slot:hover {
+      border-color: var(--accent);
+      background: #212b3d;
+    }
+    .part-slot.installed {
+      border-style: solid;
+      border-color: #3b4d6b;
+      background: linear-gradient(145deg, #222a3a, #171d28);
+    }
+    .part-slot.broken {
+      border-color: var(--accent-red);
+      box-shadow: inset 0 0 12px rgba(255, 42, 85, 0.35);
+    }
+    .part-slot.good {
+      border-color: rgba(0, 230, 118, 0.55);
+    }
+    .part-name {
+      font-weight: 700;
+      color: #dbe4f3;
+      line-height: 1.15;
+    }
+    .part-badge {
+      font-size: 10px;
+      padding: 2px 5px;
+      border-radius: 4px;
+      align-self: flex-start;
+      background: rgba(0,0,0,0.45);
+    }
+    /* Specific internal positions */
+    .slot-camera { grid-column: 1 / 2; grid-row: 1 / 2; background: #18202c; }
+    .slot-board  { grid-column: 2 / 3; grid-row: 1 / 3; background: #0e3a2f; }
+    .slot-battery{ grid-column: 1 / 2; grid-row: 2 / 4; background: #191d26; }
+    .slot-hinge  { grid-column: 2 / 3; grid-row: 3 / 4; }
+    .slot-port   { grid-column: 1 / 3; grid-row: 4 / 5; }
+
+    /* Battery connector latch */
+    .b-conn-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #283347;
+      color: #fff;
+      border: 1px solid #4c5d7d;
+      z-index: 4;
+    }
+    .b-conn-btn.connected {
+      background: rgba(0, 230, 118, 0.25);
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    /* Seal / Glue perimeter indicator */
+    .seal-frame {
+      position: absolute;
+      inset: 3px;
+      border-radius: 33px;
+      border: 3px dashed transparent;
+      pointer-events: none;
+      z-index: 4;
+    }
+    .seal-frame.applied {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 8px rgba(0, 229, 255, 0.4);
+    }
+
+    /* Bottom Pentalobe Screws */
+    .screws-bar {
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 36px;
+      z-index: 12;
+    }
+    .screw-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #b0bac9 20%, #464f5e 90%);
+      border: 2px solid #202630;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      color: #111;
+      font-weight: 900;
+      transition: 0.2s;
+    }
+    .screw-dot.unscrewed {
+      opacity: 0.25;
+      transform: scale(0.7);
+      background: #000;
+      border-color: var(--accent);
+    }
+
+    /* DAMAGE & FX CANVAS OVERLAY */
+    #fxCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9;
+      pointer-events: none;
+    }
+    /* Click catcher when using tools on phone */
+    .tool-target-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      cursor: crosshair;
+    }
+
+    /* TOOLBARS */
+    .tools-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 650px) {
+      .tools-section { grid-template-columns: 1fr; }
+    }
+    .tool-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .tool-box.rage-box {
+      border-color: rgba(255, 42, 85, 0.4);
+      background: linear-gradient(180deg, rgba(45, 14, 24, 0.7), var(--bg-card));
+    }
+    .tool-box-header {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+    }
+    .rage-box .tool-box-header { color: #ff6e89; }
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 6px;
+    }
+    .tool-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 8px;
+      padding: 7px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.15s;
+      text-align: left;
+    }
+    .tool-btn:hover {
+      border-color: var(--accent);
+      background: rgba(0, 229, 255, 0.08);
+    }
+    .tool-btn.active {
+      background: rgba(0, 229, 255, 0.18);
+      border-color: var(--accent);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+    }
+    .rage-box .tool-btn.active {
+      background: rgba(255, 42, 85, 0.25);
+      border-color: var(--accent-red);
+      box-shadow: 0 0 14px rgba(255, 42, 85, 0.4);
+    }
+
+    /* SHOP & INVENTORY RIGHT PANEL */
+    .tabs-bar {
+      display: flex;
+      gap: 6px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 7px;
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--bg-card);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      color: var(--text-main);
+      border-color: var(--accent);
+      background: rgba(0, 229, 255, 0.12);
+    }
+    .parts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 430px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .part-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .part-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .part-card-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .part-card-actions .btn {
+      flex: 1;
+      padding: 5px 8px;
+      font-size: 11px;
+    }
+
+    /* LOG CONSOLE */
+    .log-box {
+      background: #090c11;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      height: 120px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .log-entry { line-height: 1.35; }
+    .log-entry.info { color: #90caf9; }
+    .log-entry.good { color: var(--accent-green); }
+    .log-entry.warn { color: var(--accent-warn); }
+    .log-entry.bad  { color: var(--accent-red); font-weight: bold; }
+
+    /* SHAKE ANIMATION */
+    @keyframes shakeHeavy {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      20% { transform: translate(-10px, 6px) rotate(-3deg); }
+      40% { transform: translate(9px, -8px) rotate(3deg); }
+      60% { transform: translate(-8px, -4px) rotate(-2deg); }
+      80% { transform: translate(7px, 5px) rotate(2deg); }
+    }
+    .shake {
+      animation: shakeHeavy 0.28s ease-in-out;
+    }
+
+    /* MODAL */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(5px);
+      z-index: 300;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      max-width: 520px;
+      width: 100%;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .sql-pre {
+      background: #080a0f;
+            border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      color: #a5d6ff;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header class="top-bar">
+    <div class="stats-row">
+      <div class="stat-pill">🛠️ <span>iFix & Smash</span></div>
+      <div class="stat-pill money">💵 <span id="uiMoney">1200</span> $</div>
+      <div class="stat-pill rep">⭐ Реп: <span id="uiRep">50</span></div>
+      <div class="stat-pill hype">🔥 Хайп: <span id="uiHype">0</span></div>
+      <div class="stat-pill">📱 Починено: <span id="uiRepaired">0</span> | 💥 Разбито: <span id="uiSmashed">0</span></div>
+    </div>
+    <div style="display:flex; gap:6px; align-items:center;">
+      <button class="cloud-btn" onclick="openCloudModal()">
+        <span class="dot" id="cloudDot"></span>
+        <span id="cloudText">Supabase TG</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="main-grid">
+
+    <!-- LEFT COLUMN: ORDERS & CRASH STREAM -->
+    <section class="panel">
+      <h3 class="panel-title">
+        <span>👤 Клиент / Режим</span>
+        <span id="queueBadge" style="color:var(--accent)">В очереди: 3</span>
+      </h3>
+
+      <div id="clientCard" class="client-box">
+        <div class="client-header">
+          <div class="avatar" id="clientAvatar">🧔🏻</div>
+          <div class="client-meta">
+            <h4 id="clientName">Артем (Криптоблогер)</h4>
+            <span id="phoneModelTitle">iPhone 18 Pro Max (Titan)</span>
+          </div>
+        </div>
+        <div class="speech-bubble" id="clientSpeech">
+          «Брат, уронил свой 18 Про Макс в кальянной, экран в труху, еще и греется как печка. Сделай по красоте!»
+        </div>
+        <div class="order-specs">
+          <div class="spec-item">Оплата: <b id="orderReward">450 $</b></div>
+          <div class="spec-item">Режим: <b id="orderModeLabel" style="color:var(--accent)">Ремонт</b></div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">
+          <button class="btn btn-success" id="btnDeliver" onclick="deliverPhone()">
+            ✅ Выдать телефон клиенту
+          </button>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-primary" style="flex:1" onclick="nextCustomer()">
+              ⏭️ Следующий клиент
+            </button>
+            <button class="btn btn-stream" style="flex:1" onclick="startCrashStreamPhone()">
+              📹 На Краш-Стрим!
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIAGNOSTIC REPORT -->
+      <h3 class="panel-title" style="margin-top:6px;">
+        <span>🔍 Сканер iDiag Pro</span>
+        <button class="btn" style="padding:3px 8px; font-size:11px;" onclick="runDiagnostics()">Прозвонить</button>
+      </h3>
+      <div id="diagBox" class="client-box" style="font-size:12px; gap:5px;">
+        <div style="color:var(--text-muted)">Нажми «Прозвонить» или используй мультиметр, чтобы выявить все скрытые поломки узлов.</div>
+      </div>
+
+      <!-- STEP-BY-STEP HINT -->
+      <div class="client-box" style="background:rgba(0,229,255,0.04);">
+        <div style="font-size:11px; font-weight:800; color:var(--accent); text-transform:uppercase;">
+          📋 Памятка мастера:
+        </div>
+        <ol style="margin:0; padding-left:16px; font-size:11.5px; color:var(--text-muted); line-height:1.45;">
+          <li>Выключи питание кнопкой <b>«⚡ Питание»</b>.</li>
+          <li>Выкрути 2 винта внизу <b>Отверткой</b>.</li>
+          <li>Прогрей экран <b>Феном</b> до <b>75–100°C</b>.</li>
+          <li>Сними экран <b>Присоской</b> и отстегни <b>Клемму АКБ</b>!</li>
+          <li>Замени сломанные детали <b>Пинцетом</b> или пропаяй <b>Паяльником</b>.</li>
+          <li>Подключи АКБ, нанеси <b>Герметик</b>, закрой экран и закрути винты.</li>
+          <li>Либо возьми <b>Кувалду / Горелку / Дрель</b> и разнеси аппарат в щепки!</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- CENTER COLUMN: INTERACTIVE WORKBENCH -->
+    <section class="workbench">
+      <!-- Top status bar of workbench -->
+      <div class="bench-top-controls">
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" id="btnPower" onclick="togglePhonePower()">⚡ Питание: ВЫКЛ</button>
+          <button class="btn" id="btnCloseScreen" onclick="putScreenBack()">📲 Закрыть экран</button>
+        </div>
+
+        <div class="temp-gauge">
+          <span>🌡️ Нагрев: <b id="tempValue">24°C</b></span>
+          <div class="temp-bar-wrap">
+            <div class="temp-bar-fill" id="tempBar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SILICONE REPAIR MAT & PHONE -->
+      <div class="mat-surface" id="matSurface">
+        <div class="mat-grid"></div>
+        <div class="mat-rulers">ESD SAFE REPAIR MAT // iFIX-PRO 2026 // TITANIUM & FOLDABLE READY</div>
+
+        <div class="phone-wrapper" id="phoneWrapper">
+          <div class="phone-chassis" id="phoneChassis">
+            <!-- Waterproof Seal indicator -->
+            <div class="seal-frame" id="sealFrame"></div>
+
+            <!-- Duo Foldable Hinge line -->
+            <div class="duo-hinge-line"></div>
+
+            <!-- INTERNAL HARDWARE SLOTS -->
+            <div class="internals-layer" id="internalsLayer">
+              <!-- Camera Module -->
+              <div class="part-slot slot-camera" onclick="handleSlotClick('camera')">
+                <span class="part-name">📸 Камера Pro</span>
+                <span class="part-badge" id="badge-camera">OK</span>
+              </div>
+
+              <!-- Logic Board -->
+              <div class="part-slot slot-board" onclick="handleSlotClick('board')">
+                <span class="part-name" id="label-board">🧠 Плата A20 Pro</span>
+                <span class="part-badge" id="badge-board">OK</span>
+              </div>
+
+              <!-- Battery + Connector Button -->
+              <div class="part-slot slot-battery" onclick="handleSlotClick('battery')">
+                <button class="b-conn-btn connected" id="btnBattConn" onclick="toggleBatteryConnector(event)">
+                  🔌 Клемма: ВКЛ
+                </button>
+                <span class="part-name" id="label-battery">🔋 АКБ Li-Ion</span>
+                <span class="part-badge" id="badge-battery">OK</span>
+              </div>
+
+              <!-- Hinge (on Duo) or Taptic / FaceID -->
+              <div class="part-slot slot-hinge" onclick="handleSlotClick('hinge')">
+                <span class="part-name" id="label-hinge">⚙️ Шарнир / Taptic</span>
+                <span class="part-badge" id="badge-hinge">OK</span>
+              </div>
+
+              <!-- USB-C Port -->
+              <div class="part-slot slot-port" onclick="handleSlotClick('port')">
+                <span class="part-name">⚡ Порт USB-C / Шлейф</span>
+                <span class="part-badge" id="badge-port">OK</span>
+              </div>
+            </div>
+
+            <!-- FRONT OLED SCREEN LAYER -->
+            <div class="screen-layer" id="screenLayer" onclick="handleScreenClick(event)">
+              <div class="dynamic-island">
+                <div class="camera-dot"></div>
+              </div>
+
+              <div class="os-ui" id="osUi">
+                <div class="os-time">18:00</div>
+                <div class="os-sub" id="osStatusText">iOS 20 • Готов к работе</div>
+                <div class="os-apps">
+                  <div class="app-icon">📞</div>
+                  <div class="app-icon">💬</div>
+                  <div class="app-icon">📷</div>
+                  <div class="app-icon">⚙️</div>
+                </div>
+              </div>
+
+              <div style="text-align:center; font-size:11px; color:rgba(255,255,255,0.45);" id="screenHintLabel">
+                OLED Дисплейный Модуль
+              </div>
+
+              <div class="home-bar"></div>
+            </div>
+
+            <!-- FX CANVAS FOR CRACKS, BURNS, DRILL HOLES & SPARKS -->
+            <canvas id="fxCanvas" width="380" height="430"></canvas>
+
+            <!-- OVERLAY FOR SMASH/HEAT TOOLS ON EXTERIOR -->
+            <div class="tool-target-overlay" id="toolOverlay" onclick="handleOverlayClick(event)"></div>
+
+            <!-- 2 BOTTOM PENTALOBE SCREWS -->
+            <div class="screws-bar">
+              <div class="screw-dot" id="screwLeft" onclick="handleScrewClick(0, event)">✦</div>
+              <div class="screw-dot" id="screwRight" onclick="handleScrewClick(1, event)">✦</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOOLS SELECTION: REPAIR & RAGE -->
+      <div class="tools-section">
+        <!-- Precision Repair Tools -->
+        <div class="tool-box">
+          <div class="tool-box-header">
+            <span>🔧 Инструменты ремонта</span>
+            <span id="activeToolLabel" style="color:var(--accent)">Выбрано: Отвертка</span>
+          </div>
+          <div class="tools-grid">
+            <button class="tool-btn active" data-tool="screwdriver" onclick="selectTool('screwdriver')">
+              🪛 Отвертка
+            </button>
+            <button class="tool-btn" data-tool="heatgun" onclick="selectTool('heatgun')">
+              🌡️ Термофен
+            </button>
+            <button class="tool-btn" data-tool="suction" onclick="selectTool('suction')">
+              🪠 Присоска
+            </button>
+            <button class="tool-btn" data-tool="tweezers" onclick="selectTool('tweezers')">
+              镊 Пинцет
+            </button>
+            <button class="tool-btn" data-tool="solder" onclick="selectTool('solder')">
+              ♨️ Паяльник
+            </button>
+            <button class="tool-btn" data-tool="glue" onclick="selectTool('glue')">
+              💧 Герметик
+            </button>
+          </div>
+        </div>
+
+        <!-- Smash & Rage Tools -->
+        <div class="tool-box rage-box">
+          <div class="tool-box-header">
+            <span>💥 Разнос и Краш-Тест</span>
+            <span>Жми по телефону!</span>
+          </div>
+          <div class="tools-grid">
+            <button class="tool-btn" data-tool="hammer" onclick="selectTool('hammer')">
+              🔨 Кувалда
+            </button>
+            <button class="tool-btn" data-tool="torch" onclick="selectTool('torch')">
+              🔥 Горелка
+            </button>
+            <button class="tool-btn" data-tool="taser" onclick="selectTool('taser')">
+              ⚡ Шокер 220В
+            </button>
+            <button class="tool-btn" data-tool="drill" onclick="selectTool('drill')">
+              🔩 Дрель
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- EVENT LOG -->
+      <div class="log-box" id="logBox"></div>
+    </section>
+
+    <!-- RIGHT COLUMN: INVENTORY, PARTS SHOP & STREAM -->
+    <section class="panel">
+      <div class="tabs-bar">
+        <button class="tab-btn active" id="tabBtnShop" onclick="switchRightTab('shop')">🛒 Склад и Запчасти</button>
+        <button class="tab-btn" id="tabBtnStream" onclick="switchRightTab('stream')">📹 Краш-Полигон</button>
+      </div>
+
+      <!-- PARTS SHOP & INVENTORY -->
+      <div id="tabShopContent" class="parts-list"></div>
+
+      <!-- CRASH STREAM CHALLENGES -->
+      <div id="tabStreamContent" class="parts-list" style="display:none;">
+        <div class="client-box">
+          <h4 style="margin:0; color:#e040fb;">🎥 Техно-Блог: Разнос Флагманов</h4>
+          <p style="margin:4px 0; font-size:12px; color:var(--text-muted);">
+            Покупай новенькие <b>iPhone 18 Pro</b> или раскладные <b>iPhone Duo</b> и уничтожай их в прямом эфире! Каждый удар кувалдой, дырка от дрели и взрыв батареи приносит донаты от зрителей!
+          </p>
+          <button class="btn btn-stream" onclick="buyPhoneForSmash('iphone18pro', 350)">
+            💥 Купить iPhone 18 Pro на разнос (350 $)
+          </button>
+          <button class="btn btn-stream" onclick="buyPhoneForSmash('iphoneduo', 450)">
+            💥 Купить iPhone Duo на разнос (450 $)
+          </button>
+          <button class="btn btn-danger" onclick="buyPhoneForSmash('iphone16e', 150)">
+            💥 Купить Б/У iPhone 16e на разнос (150 $)
+          </button>
+        </div>
+
+        <div class="client-box">
+          <div style="font-size:12px; font-weight:700; color:var(--accent-warn);">🎯 Донат-задания от чата:</div>
+          <div id="streamQuests" style="font-size:12px; display:flex; flex-direction:column; gap:6px;"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- SUPABASE & TELEGRAM CLOUD MODAL -->
+  <div class="modal-backdrop" id="cloudModal">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0;">☁️ Сохранение Telegram + Supabase</h3>
+        <button class="btn" onclick="closeCloudModal()">✕</button>
+      </div>
+      <div style="font-size:13px; color:var(--text-muted); line-height:1.4;">
+        <div>👤 <b>Telegram аккаунт:</b> <span id="modalTgUser">Определяется...</span></div>
+        <div>🔗 <b>Эндпоинт:</b> <code>qgteoxykoeehjywdfwla.supabase.co</code></div>
+        <div>📡 <b>Статус синхронизации:</b> <span id="modalSyncStatus">Проверка...</span></div>
+      </div>
+
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-primary" style="flex:1" onclick="saveToSupabase(true)">⬆️ Сохранить в Supabase</button>
+        <button class="btn btn-success" style="flex:1" onclick="loadFromSupabase(true)">⬇️ Загрузить из Supabase</button>
+      </div>
+
+      <div style="font-size:12px; color:var(--text-muted);">
+        Если таблица <code>player_saves</code> в твоем Supabase еще не создана, скопируй и выполни этот SQL-скрипт в разделе <b>SQL Editor</b>:
+      </div>
+      <pre class="sql-pre">create table if not exists public.player_saves (
+  tg_id text primary key,
+  username text,
+  money integer default 1200,
+  rep integer default 50,
+  smashed integer default 0,
+  repaired integer default 0,
+  state_json jsonb not null default '{}'::jsonb,
+  updated_at timestamptz default now()
+);
+alter table public.player_saves enable row level security;
+create policy "Allow public access" on public.player_saves
+for all to anon, authenticated using (true) with check (true);</pre>
+    </div>
+  </div>
+
+  <script>
+    /********************************************************************
+     * 1. SUPABASE & TELEGRAM MINI APP CONFIGURATION
+     ********************************************************************/
+    const SUPABASE_REST_URL = "https://qgteoxykoeehjywdfwla.supabase.co/rest/v1";
+    const SUPABASE_KEY = "sb_publishable_9mX1fh6ASUc7sqiQWRFbdg_bjXzaH20";
+    const SUPABASE_TABLE = "player_saves";
+
+    let tgUser = {
+      id: "local_dev_user",
+      username: "Мастер",
+      first_name: "Мастер"
+    };
+
+    function initTelegramApp() {
+      try {
+        if (window.Telegram && window.Telegram.WebApp) {
+          const wa = window.Telegram.WebApp;
+          wa.ready();
+          wa.expand();
+          const u = wa.initDataUnsafe && wa.initDataUnsafe.user;
+          if (u && u.id) {
+            tgUser.id = String(u.id);
+            tgUser.username = u.username || u.first_name || ("tg_" + u.id);
+            tgUser.first_name = u.first_name || "Мастер";
+          } else {
+            let savedId = localStorage.getItem("ifix_fallback_tg_id");
+            if (!savedId) {
+              savedId = "web_" + Math.floor(100000 + Math.random() * 900000);
+              localStorage.setItem("ifix_fallback_tg_id", savedId);
+            }
+            tgUser.id = savedId;
+          }
+        }
+      } catch (e) {
+        console.warn("Telegram WebApp init fallback:", e);
+      }
+      document.getElementById("modalTgUser").textContent =
+        `${tgUser.first_name} (@${tgUser.username} | ID: ${tgUser.id})`;
+    }
+
+    /********************************************************************
+     * 2. SYNTHESIZED SOUND ENGINE (Web Audio API)
+     ********************************************************************/
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function ensureAudio() {
+      if (!audioCtx) audioCtx = new AudioCtx();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    }
+
+    function playSound(type) {
+      try {
+        ensureAudio();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === "screw") {
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.09);
+          osc.start(now);
+          osc.stop(now + 0.09);
+        } else if (type === "pop") {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(640, now + 0.11);
+          gain.gain.setValueAtTime(0.22, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        } else if (type === "solder") {
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(140, now);
+          osc.frequency.linearRampToValueAtTime(190, now + 0.18);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } else if (type === "smash") {
+          osc.type = "square";
+          osc.frequency.setValueAtTime(110, now);
+          osc.frequency.exponentialRampToValueAtTime(28, now + 0.24);
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } else if (type === "zap") {
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(950, now);
+          osc.frequency.setValueAtTime(320, now + 0.05);
+          osc.frequency.setValueAtTime(1200, now + 0.1);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.16);
+          osc.start(now);
+          osc.stop(now + 0.16);
+        } else if (type === "boom") {
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(85, now);
+          osc.frequency.exponentialRampToValueAtTime(18, now + 0.55);
+          gain.gain.setValueAtTime(0.45, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.56);
+          osc.start(now);
+          osc.stop(now + 0.56);
+        } else if (type === "cash") {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(880, now);
+          osc.frequency.setValueAtTime(1320, now + 0.08);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.24);
+          osc.start(now);
+          osc.stop(now + 0.24);
+        }
+      } catch (e) {}
+    }
+
+    /********************************************************************
+     * 3. GAME STATE & CATALOGS
+     ********************************************************************/
+    const PART_TYPES = {
+      screen:  { name: "OLED Дисплей (18 Pro / Duo)", oemCost: 160, copyCost: 75 },
+      battery: { name: "Аккумулятор Li-Ion",          oemCost: 70,  copyCost: 30 },
+      board:   { name: "Материнская плата A20 Pro",   oemCost: 210, copyCost: 110 },
+      camera:  { name: "Блок камер Cyber-Pro",        oemCost: 110, copyCost: 50 },
+      hinge:   { name: "Шарнир DuoFlex / Taptic",     oemCost: 85,  copyCost: 40 },
+      port:    { name: "Нижний шлейф USB-C",          oemCost: 50,  copyCost: 20 }
+    };
+
+        const PHONE_MODELS = {
+      iphone18pro: {
+        id: "iphone18pro",
+        title: "iPhone 18 Pro Max (Titan)",
+        isDuo: false,
+        boardLabel: "🧠 Плата A20 Pro",
+        hingeLabel: "📳 Taptic Engine",
+        baseReward: 420
+      },
+      iphoneduo: {
+        id: "iphoneduo",
+        title: "iPhone Duo (Складной 2-экранный)",
+        isDuo: true,
+        boardLabel: "🧠 Плата A20 Duo",
+        hingeLabel: "⚙️ Шарнир DuoFlex",
+        baseReward: 560
+      },
+      iphone16e: {
+        id: "iphone16e",
+        title: "iPhone 16e (Компакт)",
+        isDuo: false,
+        boardLabel: "🧠 Плата A18",
+        hingeLabel: "📳 Вибромотор",
+        baseReward: 260
+      }
+    };
+
+    const CLIENTS_POOL = [
+      { name: "Артем (Криптоблогер)", avatar: "🧔🏻", model: "iphone18pro" },
+      { name: "Алина (Стримерша)", avatar: "👩🏼‍🎤", model: "iphoneduo" },
+      { name: "Виктор Петрович (Депутат)", avatar: "👨🏻‍💼", model: "iphoneduo" },
+      { name: "Дэнчик (Курьер)", avatar: "🧑🏻‍🛵", model: "iphone16e" },
+      { name: "Карина (Инста-дива)", avatar: "👱🏻‍♀️", model: "iphone18pro" },
+      { name: "Тимур (Темщик)", avatar: "🕶️", model: "iphone18pro" }
+    ];
+
+    let state = {
+      money: 1200,
+      rep: 50,
+      hype: 0,
+      repaired: 0,
+      smashed: 0,
+      selectedpartQuality: "oem",
+      inventory: {
+        screen_oem: 1, screen_copy: 1,
+        battery_oem: 2, battery_copy: 1,
+        board_oem: 1, board_copy: 0,
+        camera_oem: 1, camera_copy: 1,
+        hinge_oem: 1, hinge_copy: 1,
+        port_oem: 2, port_copy: 1
+      }
+    };
+
+    let activeTool = "screwdriver";
+    let currentOrder = null;
+    let phone = null;
+
+    /********************************************************************
+     * 4. PHONE GENERATOR & ORDER SYSTEM
+     ********************************************************************/
+    function createPhoneInstance(modelKey, forceBrokenList = null, isStreamMode = false) {
+      const model = PHONE_MODELS[modelKey] || PHONE_MODELS.iphone18pro;
+      const allParts = ["screen", "battery", "board", "camera", "hinge", "port"];
+      let brokenParts = [];
+
+      if (forceBrokenList) {
+        brokenParts = [...forceBrokenList];
+      } else if (!isStreamMode) {
+        const count = 1 + Math.floor(Math.random() * 2);
+        const shuffled = [...allParts].sort(() => Math.random() - 0.5);
+        brokenParts = shuffled.slice(0, count);
+      }
+
+      const partsState = {};
+      allParts.forEach(p => {
+        const isBad = brokenParts.includes(p);
+        partsState[p] = {
+          installed: true,
+          status: isBad ? "broken" : "ok",
+          quality: "oem",
+          canSolder: (p === "board" || p === "port") && isBad
+        };
+      });
+
+      return {
+        modelKey: model.id,
+        title: model.title,
+        isDuo: model.isDuo,
+        isStreamMode: isStreamMode,
+        poweredOn: false,
+        screws: [true, true],
+        temp: 24,
+        screenRemoved: false,
+        batteryConnected: true,
+        sealApplied: true,
+        batteryExploded: false,
+        smashHits: 0,
+        drillHoles: 0,
+        burnLevel: 0,
+        taserHits: 0,
+        diagnosed: false,
+        parts: partsState
+      };
+    }
+
+    function generateComplaintText(modelTitle, brokenParts) {
+      const map = {
+        screen: "экран в паутину и полосит",
+        battery: "аккум вздулся и садится за 10 минут",
+        board: "материнка греется и уходит в ребут",
+        camera: "камера трясется и не фокусирует",
+        hinge: "механизм складывания/вибро хрустит",
+        port: "зарядка Type-C отходит, только под углом ловит"
+      };
+      const symptoms = brokenParts.map(k => map[k]).join(", плюс ");
+      return `«Здарова! На моем ${modelTitle} беда: ${symptoms}. Починишь или проще выкинуть?»`;
+    }
+
+    function nextCustomer() {
+      const tpl = CLIENTS_POOL[Math.floor(Math.random() * CLIENTS_POOL.length)];
+      const p = createPhoneInstance(tpl.model, null, false);
+      const brokenKeys = Object.keys(p.parts).filter(k => p.parts[k].status !== "ok");
+      const m = PHONE_MODELS[tpl.model];
+      const reward = m.baseReward + brokenKeys.length * 135;
+
+      currentOrder = {
+        clientName: tpl.name,
+        avatar: tpl.avatar,
+        reward: reward,
+        initialBroken: brokenKeys,
+        speech: generateComplaintText(m.title, brokenKeys)
+      };
+
+      phone = p;
+      clearCanvasFX();
+      if (phone.parts.screen.status !== "ok") {
+        drawCrack(110, 170, 5);
+        drawCrack(160, 260, 4);
+      }
+
+      addLog(`👤 Новый клиент: ${currentOrder.clientName} принес ${phone.title}.`, "info");
+      renderAll();
+    }
+
+    function startCrashStreamPhone() {
+      phone.isStreamMode = true;
+      currentOrder.speech = "🎥 ПРЯМОЙ ЭФИР: Зрители ждут тотального разноса этого смартфона! Бери кувалду, дрель или горелку!";
+      addLog("🎥 Включен режим Краш-Стрима! Уничтожай телефон на столе ради донатов!", "warn");
+      renderAll();
+    }
+
+    function buyPhoneForSmash(modelKey, cost) {
+      if (state.money < cost) {
+        addLog(`❌ Не хватает денег (${cost} $) для покупки аппарата на краш-тест!`, "bad");
+        return;
+      }
+      state.money -= cost;
+      phone = createPhoneInstance(modelKey, [], true);
+      phone.poweredOn = true;
+      currentOrder = {
+        clientName: "🎥 Зрители Стрима",
+        avatar: "🍿",
+        reward: 0,
+        initialBroken: [],
+        speech: `Куплен новенький ${phone.title} специально под снос! Развали его кувалдой, просверли или взорви батарею горелкой!`
+      };
+      clearCanvasFX();
+      playSound("cash");
+      addLog(`🎥 Куплен ${phone.title} для Краш-Стрима! Бери инструменты разноса!`, "good");
+      renderAll();
+      saveLocal();
+    }
+
+    /********************************************************************
+     * 5. REPAIR INTERACTION LOGIC
+     ********************************************************************/
+    function selectTool(toolName) {
+      activeTool = toolName;
+      document.querySelectorAll(".tool-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tool === toolName);
+      });
+      const names = {
+        screwdriver: "🪛 Отвертка Pentalobe",
+        heatgun: "🌡️ Термофен (Нагрев)",
+        suction: "🪠 Присоска + Медиатор",
+        tweezers: "镊 Пинцет (Снятие/Установка)",
+        solder: "♨️ Паяльная станция",
+        glue: "💧 УФ-Герметик",
+        hammer: "🔨 Кувалда (РАЗНОС)",
+        torch: "🔥 Газовая горелка (РАЗНОС)",
+        taser: "⚡ Шокер 220В (РАЗНОС)",
+        drill: "🔩 Дрель (РАЗНОС)"
+      };
+      document.getElementById("activeToolLabel").textContent = names[toolName] || toolName;
+      renderWorkbenchState();
+    }
+
+    function togglePhonePower() {
+      if (!phone) return;
+      if (!phone.parts.battery.installed || !phone.batteryConnected) {
+        addLog("⚠️ Невозможно включить: аккумулятор отключен или снят!", "warn");
+        phone.poweredOn = false;
+        renderWorkbenchState();
+        return;
+      }
+      if (phone.parts.board.status !== "ok" || phone.parts.battery.status !== "ok") {
+        addLog("⚠️ Телефон не стартует: неисправна плата или аккумулятор!", "bad");
+        playSound("zap");
+        phone.poweredOn = false;
+        renderWorkbenchState();
+        return;
+      }
+      phone.poweredOn = !phone.poweredOn;
+      playSound("pop");
+      addLog(phone.poweredOn ? "⚡ Питание смартфона ВКЛЮЧЕНО." : "⚡ Питание смартфона ВЫКЛЮЧЕНО.", "info");
+      renderWorkbenchState();
+    }
+
+    function handleScrewClick(idx, ev) {
+      ev.stopPropagation();
+      if (activeTool !== "screwdriver") {
+        addLog("🪛 Чтобы крутить нижние винты, выбери «Отвертку»!", "warn");
+        return;
+      }
+      if (phone.screws[idx]) {
+        phone.screws[idx] = false;
+        playSound("screw");
+        addLog(`🪛 Нижний винт #${idx + 1} выкручен.`, "info");
+      } else {
+        if (phone.screenRemoved) {
+          addLog("⚠️ Сначала закрой дисплей кнопкой «Закрыть экран», затем закручивай винты!", "warn");
+          return;
+        }
+        phone.screws[idx] = true;
+        playSound("screw");
+        addLog(`🪛 Нижний винт #${idx + 1} закручен на место.`, "good");
+      }
+      renderWorkbenchState();
+    }
+
+    function handleOverlayClick(ev) {
+      if (!phone) return;
+      const rect = ev.currentTarget.getBoundingClientRect();
+      const x = ((ev.clientX - rect.left) / rect.width) * 380;
+      const y = ((ev.clientY - rect.top) / rect.height) * 430;
+
+      if (["hammer", "torch", "taser", "drill"].includes(activeTool)) {
+        applyRageTool(activeTool, x, y);
+        return;
+      }
+
+      if (activeTool === "heatgun") {
+        phone.temp = Math.min(260, phone.temp + 18);
+        playSound("solder");
+        if (phone.temp >= 75 && phone.temp <= 110) {
+          addLog(`🌡️ Отлично! Клей прогрет до ${phone.temp}°C — можно снимать экран Присоской!`, "good");
+        } else if (phone.temp > 120) {
+          phone.parts.screen.status = "broken";
+          drawBurn(x, y, 28);
+          addLog(`🔥 ПЕРЕГРЕВ (${phone.temp}°C)! Ты сжег поляризатор OLED матрицы!`, "bad");
+        }
+        renderWorkbenchState();
+        return;
+      }
+
+      if (activeTool === "suction") {
+        if (phone.screws[0] || phone.screws[1]) {
+          addLog("⚠️ Нельзя снять экран! Сначала выкрути оба нижних винта Отверткой.", "warn");
+          return;
+        }
+        if (phone.temp < 70 && phone.sealApplied) {
+          addLog(`⚠️ Герметик слишком холодный (${phone.temp}°C)! Прогрей Феном хотя бы до 75°C, иначе порвешь экран.`, "warn");
+          return;
+        }
+        phone.screenRemoved = true;
+        phone.sealApplied = false;
+        playSound("pop");
+        addLog("🪠 Дисплейный модуль аккуратно отсоединен! Не забудь отключить клемму АКБ перед ремонтом.", "good");
+        renderWorkbenchState();
+        return;
+      }
+    }
+
+    function handleScreenClick(ev) {
+      handleOverlayClick(ev);
+    }
+
+    function toggleBatteryConnector(ev) {
+      ev.stopPropagation();
+      if (!phone.screenRemoved) return;
+      phone.batteryConnected = !phone.batteryConnected;
+      if (!phone.batteryConnected) phone.poweredOn = false;
+      playSound("pop");
+      addLog(
+        phone.batteryConnected
+          ? "🔌 Клемма аккумулятора подключена к плате."
+          : "🔌 Клемма аккумулятора безопасно отстегнута. Плата обесточена.",
+        phone.batteryConnected ? "info" : "good"
+      );
+      renderWorkbenchState();
+    }
+
+    function handleSlotClick(slotKey) {
+      if (!phone || !phone.screenRemoved) return;
+
+      if (["hammer", "torch", "taser", "drill"].includes(activeTool)) {
+        applyRageTool(activeTool, 190, 210);
+        return;
+      }
+
+      if (activeTool === "glue") {
+        phone.sealApplied = true;
+        playSound("pop");
+        addLog("💧 Водозащитный герметик нанесен по периметру корпуса.", "good");
+        renderWorkbenchState();
+        return;
+      }
+
+      if (phone.batteryConnected && slotKey !== "battery" && (activeTool === "tweezers" || activeTool === "solder")) {
+        phone.parts.board.status = "broken";
+        playSound("zap");
+        drawLightning(190, 140);
+        addLog("⚡ КОРОТКОЕ ЗАМЫКАНИЕ! Ты полез металлическим инструментом при неотключенной клемме АКБ и спалил плату!", "bad");
+        renderWorkbenchState();
+        return;
+      }
+
+      const part = phone.parts[slotKey];
+
+      if (activeTool === "solder") {
+        if ((slotKey === "board" || slotKey === "port") && part.installed && part.status === "broken") {
+          part.status = "ok";
+          playSound("solder");
+          addLog(`♨️ Микропайка успешна! Узел «${PART_TYPES[slotKey].name}» восстановлен без замены!`, "good");
+          renderWorkbenchState();
+        } else {
+          addLog("♨️ Паяльником можно восстановить только установленную сломанную Плату или Порт USB-C.", "warn");
+        }
+        return;
+      }
+
+      if (activeTool === "tweezers") {
+        if (part.installed) {
+          part.installed = false;
+          if (slotKey === "battery") phone.batteryConnected = false;
+          playSound("pop");
+          addLog(`镊 Снят модуль: ${PART_TYPES[slotKey].name}. Кликни еще раз, чтобы поставить новый со склада.`, "info");
+        } else {
+          installPartFromInventory(slotKey);
+        }
+        renderWorkbenchState();
+        return;
+      }
+
+      addLog("ℹ️ Выбери «Пинцет» для снятия/установки детали или «Паяльник» для перепайки.", "info");
+    }
+
+    function installPartFromInventory(slotKey) {
+      const oemKey = `${slotKey}_oem`;
+      const copyKey = `${slotKey}_copy`;
+      let usedQuality = null;
+
+      if (state.inventory[oemKey] > 0) {
+        state.inventory[oemKey]--;
+        usedQuality = "oem";
+      } else if (state.inventory[copyKey] > 0) {
+        state.inventory[copyKey]--;
+        usedQuality = "copy";
+      } else {
+        addLog(`❌ На складе нет детали «${PART_TYPES[slotKey].name}»! Купи её справа в магазине.`, "bad");
+        return;
+      }
+
+      phone.parts[slotKey].installed = true;
+      phone.parts[slotKey].status = "ok";
+      phone.parts[slotKey].quality = usedQuality;
+      if (slotKey === "screen") clearCanvasFX();
+      playSound("pop");
+      addLog(
+        `✅ Установлен новый модуль: ${PART_TYPES[slotKey].name} (${usedQuality === "oem" ? "Оригинал OEM" : "Копия Алик"}).`,
+        "good"
+      );
+      renderAll();
+    }
+
+    function putScreenBack() {
+      if (!phone.screenRemoved) {
+        addLog("ℹ️ Экран уже установлен на корпусе.", "info");
+        return;
+      }
+      if (phone.parts.screen.status !== "ok") {
+        if (state.inventory.screen_oem > 0) {
+          state.inventory.screen_oem--;
+          phone.parts.screen.status = "ok";
+          phone.parts.screen.quality = "oem";
+          clearCanvasFX();
+          addLog("✨ Перед установкой автоматически поставлен новый Оригинальный OLED экран со склада!", "good");
+        } else if (state.inventory.screen_copy > 0) {
+          state.inventory.screen_copy--;
+          phone.parts.screen.status = "ok";
+          phone.parts.screen.quality = "copy";
+          clearCanvasFX();
+          addLog("✨ Перед установкой поставлен новый экран (Копия) со склада!", "good");
+        }
+      }
+      phone.screenRemoved = false;
+      playSound("pop");
+      addLog("📲 Дисплейный модуль защелкнут в корпус. Не забудь закрутить 2 винта Отверткой!", "info");
+      renderAll();
+    }
+
+    function runDiagnostics() {
+      if (!phone) return;
+      phone.diagnosed = true;
+      playSound("cash");
+      renderDiagnostics();
+      addLog("🔍 Сканер iDiag Pro завершил полную проверку всех шин и датчиков.", "info");
+    }
+
+    /********************************************************************
+     * 6. "ХУЯРИТЬ ТЕЛЕФОНЫ" — SMASH, BURN, TASER & DRILL ENGINE
+     ********************************************************************/
+    function applyRageTool(tool, x, y) {
+      const wrap = document.getElementById("phoneWrapper");
+      wrap.classList.remove("shake");
+      void wrap.offsetWidth;
+      wrap.classList.add("shake");
+
+      const partKeys = Object.keys(phone.parts);
+
+      if (tool === "hammer") {
+        phone.smashHits++;
+        phone.parts.screen.status = "destroyed";
+        const randomPart = partKeys[Math.floor(Math.random() * partKeys.length)];
+        phone.parts[randomPart].status = "destroyed";
+        playSound("smash");
+        drawCrack(x, y, 7);
+        earnStreamDonation(45, "🔨 Мощный удар кувалдой!");
+        addLog(`🔨 ХРЯСЬ! Удар кувалдой разнес экран и повредил узел «${PART_TYPES[randomPart].name}»!`, "bad");
+      } else if (tool === "torch") {
+        phone.burnLevel++;
+        phone.temp = Math.min(350, phone.temp + 55);
+        phone.parts.screen.status = "destroyed";
+        playSound("solder");
+        drawBurn(x, y, 36);
+        earnStreamDonation(55, "🔥 Прожарка газовой горелкой!");
+
+        if (phone.temp >= 220 && !phone.batteryExploded) {
+          phone.batteryExploded = true;
+          Object.keys(phone.parts).forEach(k => (phone.parts[k].status = "destroyed"));
+          playSound("boom");
+          drawExplosion();
+          earnStreamDonation(220, "💣 ЭПИЧНЫЙ ВЗРЫВ ЛИТИЕВОЙ БАТАРЕИ В ЭФИРЕ!");
+          addLog("💣 БУУУМ! От перегрева горелкой (>220°C) взорвался литиевый аккумулятор! Телефон в тотал!", "bad");
+        } else {
+          addLog(`🔥 Горелка плавит корпус и матрицу! Температура: ${phone.temp}°C.`, "bad");
+        }
+      } else if (tool === "taser") {
+        phone.taserHits++;
+        phone.parts.board.status = "destroyed";
+        phone.parts.port.status = "destroyed";
+        phone.poweredOn = true;
+        playSound("zap");
+        drawLightning(x, y);
+        earnStreamDonation(65, "⚡ Разряд 10,000 Вольт в плату!");
+        addLog("⚡ БЗЗЗТ! Разряд шокера выжег процессор A20 Pro и контроллер питания!", "bad");
+      } else if (tool === "drill") {
+        phone.drillHoles++;
+        phone.parts.screen.status = "destroyed";
+        phone.parts.battery.status = "destroyed";
+        playSound("screw");
+        drawDrillHole(x, y);
+        earnStreamDonation(75, "🔩 Сквозная дырка дрелью!");
+        addLog("🔩 ВЖЖЖ! Ты просверлил сквозную дыру прямо через дисплей и корпус!", "bad");
+      }
+
+      if (phone.smashHits + phone.drillHoles + phone.taserHits + phone.burnLevel === 1) {
+        state.smashed++;
+      }
+
+      renderAll();
+      saveLocal();
+    }
+
+    function earnStreamDonation(baseAmount, reason) {
+      state.hype += 12;
+      if (phone.isStreamMode) {
+        const bonus = baseAmount + Math.floor(Math.random() * 35);
+        state.money += bonus;
+        addLog(`💸 ДОНАТ СО СТРИМА (+${bonus} $): «${reason}»`, "good");
+      }
+    }
+
+    /********************************************************************
+     * 7. DELIVER ORDER TO CUSTOMER
+     ********************************************************************/
+    function deliverPhone() {
+      if (!phone || !currentOrder) return;
+
+      if (phone.isStreamMode) {
+        addLog("🎥 Этот телефон куплен для Краш-Стрима! Жми «Следующий клиент», когда наиграешься.", "info");
+        return;
+      }
+
+      const totalRage = phone.smashHits + phone.drillHoles + phone.taserHits + phone.burnLevel;
+      const brokenNow = Object.keys(phone.parts).filter(
+        k => !phone.parts[k].installed || phone.parts[k].status !== "ok"
+      );
+
+      if (totalRage > 0) {
+        state.rep = Math.max(0, state.rep - 10);
+        const viralBonus = 95;
+        state.money += viralBonus;
+        playSound("boom");
+        currentOrder.speech =
+          "«ТЫ ЧЕ НАТВОРИЛ, ПСИХ?! Я принес телефон в ремонт, а ты расхерачил его кувалдой и горелкой!! Я выкладываю это в ТГ-канал!»";
+        addLog(
+          `🤬 Клиент в шоке от разнесенного телефона (-10 Репутации), но ролик залетел в реки (+${viralBonus} $ с просмотров)!`,
+          "warn"
+        );
+        renderAll();
+        saveToSupabase(false);
+        return;
+      }
+
+      if (phone.screenRemoved || !phone.screws[0] || !phone.screws[1] || !phone.batteryConnected) {
+        addLog("⚠️ Собери телефон перед выдачей: подключи АКБ, закрой экран и закрути оба нижних винта!", "warn");
+        return;
+      }
+
+      if (brokenNow.length === 0) {
+        let pay = currentOrder.reward;
+        if (phone.sealApplied) pay += 40;
+        const hasCopy = Object.values(phone.parts).some(p => p.quality === "copy");
+        if (hasCopy && Math.random() < 0.35) {
+          pay -= 60;
+          addLog("🤨 Клиент заметил китайскую копию запчасти (-60 $ от чаевых).", "warn");
+        } else {
+          state.rep += 5;
+        }
+        state.money += pay;
+        state.repaired++;
+        playSound("cash");
+        currentOrder.speech = `«Ебать ты волшебник! Мой ${phone.title} работает как из коробки! Держи ${pay} $!»`;
+        addLog(`🎉 Заказ идеально выполнен! Получено ${pay} $ и +5 к Репутации.`, "good");
+        renderAll();
+        saveToSupabase(false);
+      } else {
+                state.rep = Math.max(0, state.rep - 5);
+        addLog(
+          `❌ Клиент недоволен! Остались неисправные узлы (${brokenNow.map(k => PART_TYPES[k].name).join(", ")}).`,
+          "bad"
+        );
+        renderAll();
+      }
+    }
+
+    /********************************************************************
+     * 8. CANVAS PROCEDURAL DAMAGE FX
+     ********************************************************************/
+    const canvas = document.getElementById("fxCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function clearCanvasFX() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawCrack(cx, cy, rays = 6) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(235, 245, 255, 0.85)";
+      ctx.lineWidth = 1.6;
+      for (let i = 0; i < rays; i++) {
+        let angle = (Math.PI * 2 * i) / rays + (Math.random() - 0.5) * 0.5;
+        let px = cx;
+        let py = cy;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        const steps = 5 + Math.floor(Math.random() * 6);
+        for (let s = 0; s < steps; s++) {
+          angle += (Math.random() - 0.5) * 0.45;
+          px += Math.cos(angle) * (12 + Math.random() * 18);
+          py += Math.sin(angle) * (12 + Math.random() * 18);
+          ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(255,255,255,0.6)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawBurn(cx, cy, radius = 32) {
+      ctx.save();
+      const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, radius);
+      grad.addColorStop(0, "rgba(255, 120, 0, 0.85)");
+      grad.addColorStop(0.35, "rgba(20, 15, 10, 0.92)");
+      grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawDrillHole(cx, cy) {
+      ctx.save();
+      ctx.fillStyle = "#8a99ad";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#05070a";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      drawCrack(cx, cy, 4);
+    }
+
+    function drawLightning(cx, cy) {
+      ctx.save();
+      ctx.strokeStyle = "#00f0ff";
+      ctx.shadowColor = "#00f0ff";
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 2.2;
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        let x = cx, y = cy;
+        ctx.moveTo(x, y);
+        for (let j = 0; j < 6; j++) {
+          x += (Math.random() - 0.5) * 55;
+          y += (Math.random() - 0.5) * 55;
+          ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawExplosion() {
+      drawBurn(190, 210, 150);
+      drawCrack(190, 210, 14);
+    }
+
+    setInterval(() => {
+      if (phone && phone.temp > 24) {
+        phone.temp = Math.max(24, phone.temp - 2);
+        renderTempGauge();
+      }
+    }, 900);
+
+    /********************************************************************
+     * 9. UI RENDERING
+     ********************************************************************/
+    function renderTempGauge() {
+      if (!phone) return;
+      document.getElementById("tempValue").textContent = `${phone.temp}°C`;
+      const pct = Math.min(100, ((phone.temp - 20) / 220) * 100);
+      document.getElementById("tempBar").style.width = `${pct}%`;
+    }
+
+    function renderWorkbenchState() {
+      if (!phone) return;
+      renderTempGauge();
+
+      const chassis = document.getElementById("phoneChassis");
+      chassis.classList.toggle("duo-model", phone.isDuo);
+
+      const overlay = document.getElementById("toolOverlay");
+      const rageActive = ["hammer", "torch", "taser", "drill"].includes(activeTool);
+      overlay.style.display = (!phone.screenRemoved || rageActive) ? "block" : "none";
+
+      const scr = document.getElementById("screenLayer");
+      scr.classList.toggle("removed", phone.screenRemoved);
+      scr.classList.toggle("powered-on", phone.poweredOn && phone.parts.screen.status === "ok");
+      scr.classList.toggle("glitch", phone.poweredOn && phone.parts.screen.status !== "ok");
+
+      document.getElementById("screenHintLabel").textContent =
+        phone.isDuo ? "Dual Foldable OLED (iPhone Duo)" : "Super Retina XDR OLED (iPhone 18 Pro)";
+
+      document.getElementById("btnPower").textContent = phone.poweredOn ? "⚡ Питание: ВКЛ" : "⚡ Питание: ВЫКЛ";
+      document.getElementById("sealFrame").classList.toggle("applied", phone.sealApplied);
+
+      document.getElementById("screwLeft").classList.toggle("unscrewed", !phone.screws[0]);
+      document.getElementById("screwRight").classList.toggle("unscrewed", !phone.screws[1]);
+
+      const bBtn = document.getElementById("btnBattConn");
+      bBtn.classList.toggle("connected", phone.batteryConnected);
+      bBtn.textContent = phone.batteryConnected ? "🔌 Клемма: ВКЛ" : "🔌 Клемма: ОТКЛ";
+
+      const m = PHONE_MODELS[phone.modelKey];
+      document.getElementById("label-board").textContent = m.boardLabel;
+      document.getElementById("label-hinge").textContent = m.hingeLabel;
+
+      ["camera", "board", "battery", "hinge", "port"].forEach(k => {
+        const p = phone.parts[k];
+        const badge = document.getElementById(`badge-${k}`);
+        const slotEl = badge.parentElement;
+        slotEl.classList.remove("installed", "broken", "good");
+
+        if (!p.installed) {
+          badge.textContent = "СНЯТО (Пусто)";
+          badge.style.color = "#ffab00";
+        } else {
+          slotEl.classList.add("installed");
+          if (p.status === "ok") {
+            slotEl.classList.add("good");
+            badge.textContent = p.quality === "oem" ? "ИСПРАВНО (OEM)" : "ИСПРАВНО (Копия)";
+            badge.style.color = "#00e676";
+          } else {
+            slotEl.classList.add("broken");
+            badge.textContent =
+              p.status === "destroyed"
+                ? "💥 В ТРУХУ!"
+                : (k === "board" || k === "port")
+                  ? "⚠️ СЛОМАН (Пайка/Замена)"
+                  : "⚠️ СЛОМАН (Под замену)";
+            badge.style.color = "#ff2a55";
+          }
+        }
+      });
+    }
+
+    function renderDiagnostics() {
+      const box = document.getElementById("diagBox");
+      if (!phone) return;
+      if (!phone.diagnosed) {
+        box.innerHTML = `<div style="color:var(--text-muted)">Нажми «Прозвонить», чтобы увидеть точный отчет по всем модулям ${phone.title}.</div>`;
+        return;
+      }
+      const rows = Object.keys(PART_TYPES).map(k => {
+        const p = phone.parts[k];
+        const st = !p.installed
+          ? `<b style="color:var(--accent-warn)">СНЯТ</b>`
+          : p.status === "ok"
+            ? `<b style="color:var(--accent-green)">ОК</b>`
+            : `<b style="color:var(--accent-red)">НЕИСПРАВЕН</b>`;
+        return `<div style="display:flex; justify-content:space-between;"><span>${PART_TYPES[k].name}:</span> ${st}</div>`;
+      });
+      box.innerHTML = rows.join("");
+    }
+
+    function renderShopAndInventory() {
+      const container = document.getElementById("tabShopContent");
+      container.innerHTML = Object.keys(PART_TYPES)
+        .map(k => {
+          const info = PART_TYPES[k];
+          const oemCount = state.inventory[`${k}_oem`] || 0;
+          const copyCount = state.inventory[`${k}_copy`] || 0;
+          return `
+            <div class="part-card">
+              <div class="part-card-top">
+                <span>${info.name}</span>
+                <span style="font-size:11px; color:var(--accent)">
+                  Склад: OEM (${oemCount}) | Копия (${copyCount})
+                </span>
+              </div>
+              <div class="part-card-actions">
+                <button class="btn btn-primary" onclick="buyPart('${k}', 'oem', ${info.oemCost})">
+                  + Оригинал (${info.oemCost} $)
+                </button>
+                <button class="btn" onclick="buyPart('${k}', 'copy', ${info.copyCost})">
+                  + Копия Алик (${info.copyCost} $)
+                </button>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+
+      const qBox = document.getElementById("streamQuests");
+      if (qBox && phone) {
+        qBox.innerHTML = `
+          <div>🔨 Ударов кувалдой по аппарату: <b>${phone.smashHits}</b></div>
+          <div>🔩 Просверлено дырок дрелью: <b>${phone.drillHoles}</b></div>
+          <div>⚡ Ударов шокером 220В: <b>${phone.taserHits}</b></div>
+          <div>💣 Статус батареи: <b>${phone.batteryExploded ? "ВЗОРВАНА 🔥" : "Целая (грей Горелкой >220°C)"}</b></div>
+        `;
+      }
+    }
+
+    function buyPart(partKey, quality, cost) {
+      if (state.money < cost) {
+        addLog(`❌ Недостаточно средств! Нужно ${cost} $.`, "bad");
+        return;
+      }
+      state.money -= cost;
+      const invKey = `${partKey}_${quality}`;
+      state.inventory[invKey] = (state.inventory[invKey] || 0) + 1;
+      playSound("cash");
+      addLog(`🛒 Закуплена деталь: ${PART_TYPES[partKey].name} (${quality === "oem" ? "OEM" : "Копия"}).`, "good");
+      renderAll();
+      saveLocal();
+    }
+
+    function switchRightTab(tab) {
+      document.getElementById("tabBtnShop").classList.toggle("active", tab === "shop");
+      document.getElementById("tabBtnStream").classList.toggle("active", tab === "stream");
+      document.getElementById("tabShopContent").style.display = tab === "shop" ? "flex" : "none";
+      document.getElementById("tabStreamContent").style.display = tab === "stream" ? "flex" : "none";
+    }
+
+    function renderAll() {
+      document.getElementById("uiMoney").textContent = state.money;
+      document.getElementById("uiRep").textContent = state.rep;
+      document.getElementById("uiHype").textContent = state.hype;
+      document.getElementById("uiRepaired").textContent = state.repaired;
+      document.getElementById("uiSmashed").textContent = state.smashed;
+
+      if (currentOrder && phone) {
+        document.getElementById("clientAvatar").textContent = currentOrder.avatar;
+        document.getElementById("clientName").textContent = currentOrder.clientName;
+        document.getElementById("phoneModelTitle").textContent = phone.title;
+        document.getElementById("clientSpeech").textContent = currentOrder.speech;
+        document.getElementById("orderReward").textContent =
+          phone.isStreamMode ? "Донаты за удары" : `${currentOrder.reward} $`;
+        document.getElementById("orderModeLabel").textContent =
+          phone.isStreamMode ? "🎥 КРАШ-СТРИМ" : "🛠️ Ремонт";
+      }
+
+      renderWorkbenchState();
+      renderDiagnostics();
+      renderShopAndInventory();
+    }
+
+    function addLog(msg, level = "info") {
+      const box = document.getElementById("logBox");
+      const div = document.createElement("div");
+      div.className = `log-entry ${level}`;
+      const time = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      div.textContent = `[${time}] ${msg}`;
+      box.prepend(div);
+    }
+
+    /********************************************************************
+     * 10. SUPABASE REST API + LOCALSTORAGE PERSISTENCE
+     ********************************************************************/
+    function setCloudIndicator(status, text) {
+      const dot = document.getElementById("cloudDot");
+      const label = document.getElementById("cloudText");
+      const modalStatus = document.getElementById("modalSyncStatus");
+      dot.className = "dot " + (status === "ok" ? "ok" : status === "err" ? "err" : "");
+      label.textContent = text;
+      if (modalStatus) modalStatus.textContent = text;
+    }
+
+    function saveLocal() {
+      try {
+        localStorage.setItem("ifix_smash_save_v1", JSON.stringify(state));
+      } catch (e) {}
+    }
+
+    function loadLocal() {
+      try {
+        const raw = localStorage.getItem("ifix_smash_save_v1");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          state = { ...state, ...parsed, inventory: { ...state.inventory, ...(parsed.inventory || {}) } };
+        }
+      } catch (e) {}
+    }
+
+    async function saveToSupabase(manual = false) {
+      saveLocal();
+      setCloudIndicator("warn", "Синхронизация...");
+      try {
+        const payload = {
+          tg_id: String(tgUser.id),
+          username: tgUser.username,
+          money: state.money,
+          rep: state.rep,
+          smashed: state.smashed,
+          repaired: state.repaired,
+          state_json: state,
+          updated_at: new Date().toISOString()
+        };
+
+        const res = await fetch(`${SUPABASE_REST_URL}/${SUPABASE_TABLE}?on_conflict=tg_id`, {
+          method: "POST",
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`,
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates,return=minimal"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          setCloudIndicator("ok", "Облако ОК");
+          if (manual) addLog("☁️ Прогресс успешно сохранен в Supabase по твоему Telegram ID!", "good");
+        } else {
+          const errText = await res.text();
+          setCloudIndicator("err", "Локально (Создай SQL)");
+          if (manual) {
+            addLog(`⚠️ Ответ Supabase (${res.status}): Убедись, что выполнил SQL-скрипт из окна «Облако».`, "warn");
+          }
+          console.warn("Supabase save warning:", errText);
+        }
+      } catch (err) {
+        setCloudIndicator("err", "Офлайн-сейв");
+        if (manual) addLog("⚠️ Ошибка сети при подключении к Supabase. Прогресс сохранен локально.", "warn");
+      }
+    }
+
+    async function loadFromSupabase(manual = false) {
+      loadLocal();
+      setCloudIndicator("warn", "Загрузка...");
+      try {
+        const url = `${SUPABASE_REST_URL}/${SUPABASE_TABLE}?tg_id=eq.${encodeURIComponent(tgUser.id)}&select=*`;
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`
+          }
+        });
+
+        if (res.ok) {
+          const rows = await res.json();
+          if (rows && rows.length > 0 && rows[0].state_json) {
+            const cloudState = rows[0].state_json;
+            state = {
+              ...state,
+              ...cloudState,
+              inventory: { ...state.inventory, ...(cloudState.inventory || {}) }
+            };
+            saveLocal();
+            renderAll();
+            setCloudIndicator("ok", "Облако ОК");
+            addLog(`☁️ Загружено сохранение из Supabase для аккаунта @${tgUser.username}!`, "good");
+          } else {
+            setCloudIndicator("ok", "Новый профиль");
+            if (manual) addLog("ℹ️ В облаке еще нет записи для этого TG ID, создаем новую...", "info");
+            saveToSupabase(false);
+          }
+        } else {
+          setCloudIndicator("err", "Локальный сейв");
+        }
+      } catch (e) {
+        setCloudIndicator("err", "Локальный сейв");
+      }
+    }
+
+    function openCloudModal() {
+      document.getElementById("cloudModal").classList.add("open");
+    }
+    function closeCloudModal() {
+      document.getElementById("cloudModal").classList.remove("open");
+    }
+
+    /********************************************************************
+     * 11. BOOTSTRAP
+     ********************************************************************/
+    window.addEventListener("DOMContentLoaded", () => {
+      initTelegramApp();
+      nextCustomer();
+      loadFromSupabase(false);
+    });
+  </script>
+</body>
+</html>
